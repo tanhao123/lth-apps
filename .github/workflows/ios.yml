@@ -1,0 +1,176 @@
+# Builds an iOS app on a GitHub Mac from a Unity Xcode export, signs it for the App Store and uploads it
+# to App Store Connect. Written by Tools/store/ios_cloud.py (giaotrinh workspace): change it there.
+# The release <tag> holds the Xcode export as a .zip and the app's App Store .mobileprovision.
+name: iOS build
+run-name: iOS ${{ inputs.tag }}
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release holding the Xcode zip and the .mobileprovision
+        required: true
+      upload:
+        description: Upload the build to App Store Connect
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: ios-${{ inputs.tag }}
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      TAG: ${{ inputs.tag }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch the Xcode project
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/in" -p "*.zip" -p "*.mobileprovision"
+          ls -la "$RUNNER_TEMP/in"
+          unzip -q "$RUNNER_TEMP"/in/*.zip -d "$RUNNER_TEMP/work"
+          PODFILE=$(find "$RUNNER_TEMP/work" -maxdepth 3 -name Podfile | head -1)
+          PROJ=$(dirname "$PODFILE")
+          test -d "$PROJ/Unity-iPhone.xcodeproj"
+          find "$PROJ" -maxdepth 1 -name "*.sh" -exec chmod +x {} +
+          chmod -R +x "$PROJ/Il2CppOutputProject/IL2CPP/build" 2>/dev/null || true
+          echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+
+      - name: CocoaPods
+        run: |
+          set -euo pipefail
+          cd "$PROJ"
+          pod install > "$RUNNER_TEMP/pods.log" 2>&1 || { tail -40 "$RUNNER_TEMP/pods.log"; exit 1; }
+          tail -5 "$RUNNER_TEMP/pods.log"
+
+      - name: Signing
+        env:
+          P12: ${{ secrets.DIST_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DIST_P12_PASSWORD }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          KC="$RUNNER_TEMP/build.keychain-db"; KCP="$(uuidgen)"
+          security create-keychain -p "$KCP" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KCP" "$KC"
+          printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          rm -f "$RUNNER_TEMP/dist.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCP" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KC"
+          PROFILE=$(ls "$RUNNER_TEMP"/in/*.mobileprovision | head -1)
+          security cms -D -i "$PROFILE" > "$RUNNER_TEMP/profile.plist"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$RUNNER_TEMP/profile.plist")
+          NAME=$(/usr/libexec/PlistBuddy -c "Print Name" "$RUNNER_TEMP/profile.plist")
+          APPID=$(/usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" "$RUNNER_TEMP/profile.plist")
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"; cp "$PROFILE" "$d/$UUID.mobileprovision"
+          done
+          echo "PROFILE_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "BUNDLE_ID=${APPID#*.}" >> "$GITHUB_ENV"
+          echo "profile: $NAME for ${APPID#*.}"
+          mkdir -p "$HOME/private_keys"
+          printf '%s' "$ASC_KEY_P8" > "$HOME/private_keys/AuthKey_$ASC_KEY_ID.p8"
+
+      - name: Signing settings
+        run: |
+          set -euo pipefail
+          cd "$PROJ"
+          ruby -e 'require "xcodeproj"' 2>/dev/null || gem install --user-install xcodeproj
+          ruby -e '
+            require "xcodeproj"
+            app = Xcodeproj::Project.open("Unity-iPhone.xcodeproj")
+            app.targets.each do |t|
+              t.build_configurations.each do |c|
+                s = c.build_settings
+                s["DEVELOPMENT_TEAM"] = ENV["TEAM_ID"]
+                s["CODE_SIGN_STYLE"] = "Manual"
+                s["CODE_SIGN_IDENTITY"] = "Apple Distribution"
+                s["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = "Apple Distribution"
+                s["PROVISIONING_PROFILE_SPECIFIER"] = t.name == "Unity-iPhone" ? ENV["PROFILE_NAME"] : ""
+                s["PROVISIONING_PROFILE"] = ""
+              end
+            end
+            app.save
+            if File.exist?("Pods/Pods.xcodeproj")
+              pods = Xcodeproj::Project.open("Pods/Pods.xcodeproj")
+              pods.targets.each do |t|
+                next unless t.respond_to?(:product_type) && t.product_type == "com.apple.product-type.bundle"
+                t.build_configurations.each { |c| c.build_settings["CODE_SIGNING_ALLOWED"] = "NO" }
+              end
+              pods.save
+            end
+            puts "signing set: " + app.targets.map(&:name).join(", ")'
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          cd "$PROJ"
+          xcodebuild -list -workspace Unity-iPhone.xcworkspace | head -20
+          xcodebuild -workspace Unity-iPhone.xcworkspace -scheme Unity-iPhone -configuration Release \
+            -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/app.xcarchive" archive \
+            > "$RUNNER_TEMP/archive.log" 2>&1 \
+            || { grep -E "error:|\*\* ARCHIVE" "$RUNNER_TEMP/archive.log" | head -60; tail -60 "$RUNNER_TEMP/archive.log"; exit 1; }
+          grep -E "\*\* ARCHIVE" "$RUNNER_TEMP/archive.log"
+
+      - name: Export the .ipa
+        run: |
+          set -euo pipefail
+          EO="$RUNNER_TEMP/ExportOptions.plist"
+          cat > "$EO" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key><dict><key>$BUNDLE_ID</key><string>$PROFILE_NAME</string></dict>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" -exportOptionsPlist "$EO" \
+            -exportPath "$RUNNER_TEMP/out" > "$RUNNER_TEMP/export.log" 2>&1 \
+            || { tail -60 "$RUNNER_TEMP/export.log"; exit 1; }
+          ls -la "$RUNNER_TEMP/out"
+
+      - name: Upload to App Store Connect
+        if: inputs.upload
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          IPA=$(ls "$RUNNER_TEMP"/out/*.ipa | head -1)
+          if xcrun --find altool > /dev/null 2>&1; then
+            xcrun altool --upload-app --type ios --file "$IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
+              --output-format normal 2>&1 | tee "$RUNNER_TEMP/upload.log"
+            grep -qiE "No errors uploading|UPLOAD SUCCEEDED|successfully uploaded" "$RUNNER_TEMP/upload.log"
+          else
+            sed 's#<string>export</string>#<string>upload</string>#' "$RUNNER_TEMP/ExportOptions.plist" > "$RUNNER_TEMP/UploadOptions.plist"
+            xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/UploadOptions.plist" \
+              -exportPath "$RUNNER_TEMP/out-upload" -allowProvisioningUpdates \
+              -authenticationKeyPath "$HOME/private_keys/AuthKey_$ASC_KEY_ID.p8" \
+              -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload.log"
+            grep -qE "\*\* EXPORT SUCCEEDED" "$RUNNER_TEMP/upload.log"
+          fi
+
+      - name: Keep the logs with the release
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP"
+          ls *.log >/dev/null 2>&1 && gh release upload "$TAG" *.log -R "$GITHUB_REPOSITORY" --clobber || true
+
+      - name: Keep the .ipa when the upload failed
+        if: failure()
+        run: |
+          ls "$RUNNER_TEMP"/out/*.ipa >/dev/null 2>&1 && gh release upload "$TAG" "$RUNNER_TEMP"/out/*.ipa -R "$GITHUB_REPOSITORY" --clobber || true
