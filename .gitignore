@@ -3,3 +3,17 @@
 *.p12
 *.p8
 *.mobileprovision
+# Keys and store configs live in D:/Keys and never come here
+*.keystore
+*.jks
+*.cer
+*.pem
+android_signing.json
+appstore_api.json
+appstore_contact.json
+play_api.json
+play_console.json
+ios_signing.json
+ios_cloud.json
+*service-account*.json
+AuthKey_*
