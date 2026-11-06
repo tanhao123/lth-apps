@@ -1,14 +1,16 @@
-# Privacy policy for the LTH learning apps
+# Privacy policies for Lam Tan Hao's apps and games
 
-Public web page for the privacy policy of the owner's learning apps (Toán 1, Tiếng Việt 1, Toán Mầm Non,
-Tiếng Anh Mầm Non, Toán 9, Hình Học 12), served by GitHub Pages:
+Public web pages served by GitHub Pages, from `main` / root:
 
-- `privacy-policy.html`: the policy. It is a copy of `docs/privacy-policy.html` in the giaotrinh workspace, which
-  is the source, reviewed with the apps' code. Change it there first, then copy it here.
-- `index.html`: points to the policy.
-- `.nojekyll`: GitHub Pages serves the files as they are.
+| Page | Covers | Source (change it there first, then copy it here) |
+|---|---|---|
+| `privacy-policy.html` | The learning apps: Toán 1, Tiếng Việt 1, Toán Mầm Non, Tiếng Anh Mầm Non, Toán 9, Hình Học 12 | `docs/privacy-policy.html` in the giaotrinh workspace |
+| `games/privacy-policy.html` | The games: Gunforce, GunGhost | `docs/privacy-policy.html` in the UnityGame workspace |
 
-To publish: make the repository public, then Settings ▸ Pages ▸ Build and deployment ▸ Deploy from a branch ▸
-`main` / root. The page is then at `https://<user>.github.io/<repository>/privacy-policy.html`.
+Each source is reviewed with its apps' code. `index.html` links to both. `.nojekyll`: GitHub Pages serves the files as
+they are.
 
-Nothing else belongs here: no builds, no keys, no workflows.
+The pages are at `https://tanhao123.github.io/lth-apps/privacy-policy.html` and
+`https://tanhao123.github.io/lth-apps/games/privacy-policy.html`.
+
+Nothing else belongs here: no builds, no keys, no workflows. This repository is public.
