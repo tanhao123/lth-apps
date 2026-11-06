@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -version
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/in" -p "*.zip" -p "*.mobileprovision"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/in" -p "*.zip" -p "*.mobileprovision" -p "AppStoreIcon-1024.png"
           ls -la "$RUNNER_TEMP/in"
           unzip -q "$RUNNER_TEMP"/in/*.zip -d "$RUNNER_TEMP/work"
           PODFILE=$(find "$RUNNER_TEMP/work" -maxdepth 3 -name Podfile | head -1)
@@ -39,6 +39,31 @@ jobs:
           find "$PROJ" -maxdepth 1 -name "*.sh" -exec chmod +x {} +
           chmod -R +x "$PROJ/Il2CppOutputProject/IL2CPP/build" 2>/dev/null || true
           echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+
+      - name: App Store icon
+        # Unity leaves the 1024 'App Store' icon empty unless Player Settings fills it; Apple refuses such uploads.
+        run: |
+          set -euo pipefail
+          SET="$PROJ/Unity-iPhone/Images.xcassets/AppIcon.appiconset"
+          python3 - "$SET" "$RUNNER_TEMP/in/AppStoreIcon-1024.png" <<'PY'
+          import json, os, shutil, sys
+          folder, icon = sys.argv[1], sys.argv[2]
+          path = os.path.join(folder, "Contents.json")
+          with open(path) as f:
+              c = json.load(f)
+          images = c.setdefault("images", [])
+          if any(i.get("filename") and (i.get("idiom") in ("ios-marketing", "universal") or i.get("size") == "1024x1024") for i in images):
+              print("App Store icon: in the export")
+          elif not os.path.exists(icon):
+              sys.exit("App Store icon: missing from the export and from the release")
+          else:
+              shutil.copy(icon, os.path.join(folder, "Icon-AppStore-1024.png"))
+              images.append({"filename": "Icon-AppStore-1024.png", "idiom": "ios-marketing", "scale": "1x", "size": "1024x1024"})
+              with open(path, "w") as f:
+                  json.dump(c, f, indent=2)
+              print("App Store icon: added")
+          PY
+          sips -g pixelWidth -g pixelHeight -g hasAlpha "$SET"/Icon-AppStore-1024.png 2>/dev/null || true
 
       - name: CocoaPods
         run: |
