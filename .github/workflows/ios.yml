@@ -32,7 +32,29 @@ jobs:
           xcodebuild -version
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D "$RUNNER_TEMP/in" -p "*.zip" -p "*.mobileprovision" -p "AppStoreIcon-1024.png"
           ls -la "$RUNNER_TEMP/in"
-          unzip -q "$RUNNER_TEMP"/in/*.zip -d "$RUNNER_TEMP/work"
+          # Python, not unzip: macOS unzip breaks on UTF-8 names ("Tiếng Việt 1_BurstDebugInformation_DoNotShip")
+          ZIP=$(ls "$RUNNER_TEMP"/in/*.zip | head -1)
+          python3 - "$ZIP" "$RUNNER_TEMP/work" <<'PY'
+          import os, stat, sys, zipfile
+          src, dst = sys.argv[1], sys.argv[2]
+          n = skipped = 0
+          with zipfile.ZipFile(src) as z:
+              for i in z.infolist():
+                  if any(p.endswith("_DoNotShip") for p in i.filename.split("/")[:2]):
+                      skipped += 1
+                      continue
+                  attr = i.external_attr >> 16
+                  if stat.S_ISLNK(attr):
+                      full = os.path.join(dst, i.filename)
+                      os.makedirs(os.path.dirname(full), exist_ok=True)
+                      os.symlink(z.read(i).decode(), full)
+                      continue
+                  path = z.extract(i, dst)
+                  if attr & 0o777 and not i.is_dir():
+                      os.chmod(path, attr & 0o777)
+                  n += 1
+          print(f"unzipped {n} entries; skipped {skipped} debug files (_DoNotShip)")
+          PY
           PODFILE=$(find "$RUNNER_TEMP/work" -maxdepth 3 -name Podfile | head -1)
           PROJ=$(dirname "$PODFILE")
           test -d "$PROJ/Unity-iPhone.xcodeproj"
