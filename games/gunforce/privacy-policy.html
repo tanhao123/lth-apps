@@ -22,17 +22,19 @@
 <main>
 
 <h1>Gunforce – Privacy Policy</h1>
-<p class="meta">Effective 7 November 2026 · Developer: Lam Tan Hao · Windows, Android and iOS</p>
+<p class="meta">Effective 10 November 2026 · Developer: Lam Tan Hao · Windows, Android, iOS and the web</p>
 
 <p>This policy covers <strong>Gunforce</strong> (“LTH - Gunforce” on the App Store), a 2D side-scrolling
-run-and-gun action game by the developer Lam Tan Hao, on the Microsoft Store, Google Play and the App Store. The game
-needs no account and does not ask for your name, age or location. This page explains every piece of information the
+run-and-gun action game by the developer Lam Tan Hao, on the Microsoft Store, Google Play and the App Store, and in
+a web browser on the LTH Games web store. The game needs no account and does not ask for your name, age or location. This page explains every piece of information the
 game uses and where it goes.</p>
 
 <h2>Stored on your device</h2>
 <p>The game saves its progress and settings on your own device only: the stages you have reached and your last
 checkpoint with its score, your high score, the difficulty, the music and sound volumes, and whether the touch
-controls are shown. This is never sent anywhere, and it is removed when you uninstall the game.</p>
+controls are shown. On the web version, also a random device code for online co-op (see Online co-op below). None of
+this is sent to the developer's server. It is removed when you uninstall the game, or, on the web version, when you
+clear this site's data in your browser.</p>
 
 <h2>Internet check</h2>
 <p>The game needs an internet connection. When it opens, and again before play goes on (for example before a stage),
@@ -76,6 +78,55 @@ use its services</a> and <a href="https://policies.google.com/privacy">Google's 
 
 <h2>Windows</h2>
 <p>The Windows version shows no ads and uses no ad network.</p>
+
+<h2>Web version</h2>
+<p>The web version runs in your browser from the LTH Games web store. Your progress and settings are saved in your
+browser's storage on your device, and clearing the site's data in your browser removes them. To keep you on the
+newest version, the browser also remembers which version of the game you played last.</p>
+<p>The web store's own pages, and the game's page there, may show ads (Google AdSense) and may store small files
+(cookies and similar identifiers) in your browser. The web version of the game may also show ads at breaks in play,
+through Google's ad breaks, never during play. What these do is described in
+<a href="https://happy-pebble-05a500d00.3.azurestaticapps.net/privacy">the LTH Games privacy notice</a>, which also
+links to Google's explanation. The sections above on the internet check and on feedback apply to the web version as
+the game does them there.</p>
+
+<h2>Online co-op</h2>
+<p>The web version has online co-op for 2 to 4 players. Other versions do not have it yet. You use it only if you
+choose ONLINE CO-OP; playing alone sends nothing of this kind. There are no accounts, no names to type, no chat and no
+voice: players are only seats in the room (P1 to P4).</p>
+<ul>
+  <li><strong>Players connect directly.</strong> Co-op uses a direct peer-to-peer connection between your browser
+      and the others' (WebRTC). The players in a room can therefore see each other's IP addresses. The host's game
+      runs the room, and what you do in it (movement, shots, the state of the stage) goes straight between the
+      players, encrypted, and not through the developer's server. Only play with people you trust to know your
+      address.</li>
+  <li><strong>Finding each other.</strong> To find your public address, your browser contacts public STUN servers run
+      by Cloudflare and Google. They see your IP address, as any web request shows it.</li>
+  <li><strong>A relay when needed.</strong> If a direct connection cannot be made, the game data can go through a relay
+      (TURN) run by Cloudflare. The data is encrypted end to end between the players (DTLS), so the relay carries it
+      without reading it, but Cloudflare sees the IP addresses and how much data passes. See
+      <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.</li>
+  <li><strong>The developer's server only introduces players.</strong> To set up a room, the game calls the
+      developer's server (the same one as the feedback form, on Microsoft Azure), which passes each player's
+      connection details to the host and the host's reply back. It keeps rooms <strong>in memory only</strong>, with
+      no database. For a room it holds a room code, a secret key for the host, the game's name, the kind of platform
+      (“WebGL”) and build, and the connection details of players who are joining (these contain IP addresses and
+      ports). A room is removed when its host closes it, or about a minute after the host stops checking in, and a
+      join attempt expires after 90 seconds. Restarting the server also clears all rooms. The server does not write
+      these details to its own logs; what it does record is below.</li>
+  <li><strong>Limits on abuse.</strong> The server looks at your IP address to limit how many rooms and join requests
+      one address can make in a minute. These counters are kept in memory.</li>
+  <li><strong>Records the server's host keeps.</strong> The developer's server writes a short line when a room is
+      created or closed, with the room code, the game's name and the platform, and no IP address. Separately, the
+      web server's host (Microsoft Azure) keeps standard access logs, which include IP addresses and the addresses
+      requested, for 3 days and then deletes them.</li>
+  <li><strong>Your device code.</strong> The game makes a random code, which is not linked to you, and saves it in
+      your browser. When you join a room it is sent to the host over the direct
+      connection, so that if you drop out you can get your seat back. It is never sent to the developer's server, and
+      the host's game keeps it only while the room lasts. Clearing the site's data in your browser deletes it.</li>
+  <li><strong>Invite links</strong> contain the room code. Anyone who has the link can try to join the room while it is
+      open, so share it only with the players you want.</li>
+</ul>
 
 <h2>Game engine diagnostics</h2>
 <p>The game is built with Unity. Unity may send anonymous technical details of your device, such as its model,
