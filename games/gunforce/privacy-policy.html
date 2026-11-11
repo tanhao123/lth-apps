@@ -22,7 +22,7 @@
 <main>
 
 <h1>Gunforce – Privacy Policy</h1>
-<p class="meta">Effective 10 November 2026 · Developer: Lam Tan Hao · Windows, Android, iOS and the web</p>
+<p class="meta">Effective 11 November 2026 · Developer: Lam Tan Hao · Windows, Android, iOS and the web</p>
 
 <p>This policy covers <strong>Gunforce</strong> (“LTH - Gunforce” on the App Store), a 2D side-scrolling
 run-and-gun action game by the developer Lam Tan Hao, on the Microsoft Store, Google Play and the App Store, and in
@@ -32,7 +32,7 @@ game uses and where it goes.</p>
 <h2>Stored on your device</h2>
 <p>The game saves its progress and settings on your own device only: the stages you have reached and your last
 checkpoint with its score, your high score, the difficulty, the music and sound volumes, and whether the touch
-controls are shown. On the web version, also a random device code for online co-op (see Online co-op below). None of
+controls are shown. In the versions with online co-op, also a random device code for it (see Online co-op below). None of
 this is sent to the developer's server. It is removed when you uninstall the game, or, on the web version, when you
 clear this site's data in your browser.</p>
 
@@ -91,16 +91,21 @@ links to Google's explanation. The sections above on the internet check and on f
 the game does them there.</p>
 
 <h2>Online co-op</h2>
-<p>The web version has online co-op for 2 to 4 players. Other versions do not have it yet. You use it only if you
+<p>Online co-op for 2 to 4 players is in the web version and in the Windows, Android and iOS versions that offer ONLINE CO-OP
+(on Android only on 64-bit phones), and players on different platforms can share a room. You use it only if you
 choose ONLINE CO-OP; playing alone sends nothing of this kind. There are no accounts, no names to type, no chat and no
 voice: players are only seats in the room (P1 to P4).</p>
 <ul>
-  <li><strong>Players connect directly.</strong> Co-op uses a direct peer-to-peer connection between your browser
+  <li><strong>Players connect directly.</strong> Co-op uses a direct peer-to-peer connection between your device
       and the others' (WebRTC). The players in a room can therefore see each other's IP addresses. The host's game
       runs the room, and what you do in it (movement, shots, the state of the stage) goes straight between the
       players, encrypted, and not through the developer's server. Only play with people you trust to know your
       address.</li>
-  <li><strong>Finding each other.</strong> To find your public address, your browser contacts public STUN servers run
+  <li><strong>The room list.</strong> While a room has a free seat, it appears in FIND A ROOM with only how many
+      players it has, its stage and whether a game is on: never its code, a name or an address. Asking to join a room
+      from the list sends your connection details to the host's game, and the host's game sends nothing back (its
+      address included) unless the host lets you in. A room joined with its code asks nobody.</li>
+  <li><strong>Finding each other.</strong> To find your public address, your device contacts public STUN servers run
       by Cloudflare and Google. They see your IP address, as any web request shows it.</li>
   <li><strong>A relay when needed.</strong> If a direct connection cannot be made, the game data can go through a relay
       (TURN) run by Cloudflare. The data is encrypted end to end between the players (DTLS), so the relay carries it
@@ -110,7 +115,7 @@ voice: players are only seats in the room (P1 to P4).</p>
       developer's server (the same one as the feedback form, on Microsoft Azure), which passes each player's
       connection details to the host and the host's reply back. It keeps rooms <strong>in memory only</strong>, with
       no database. For a room it holds a room code, a secret key for the host, the game's name, the kind of platform
-      (“WebGL”) and build, and the connection details of players who are joining (these contain IP addresses and
+      (“WebGL”, “Windows”, “Android” or “iOS”) and the game's version, and the connection details of players who are joining (these contain IP addresses and
       ports). A room is removed when its host closes it, or about a minute after the host stops checking in, and a
       join attempt expires after 90 seconds. Restarting the server also clears all rooms. The server does not write
       these details to its own logs; what it does record is below.</li>
@@ -120,10 +125,13 @@ voice: players are only seats in the room (P1 to P4).</p>
       created or closed, with the room code, the game's name and the platform, and no IP address. Separately, the
       web server's host (Microsoft Azure) keeps standard access logs, which include IP addresses and the addresses
       requested, for 3 days and then deletes them.</li>
-  <li><strong>Your device code.</strong> The game makes a random code, which is not linked to you, and saves it in
-      your browser. When you join a room it is sent to the host over the direct
+  <li><strong>Your device code.</strong> The game makes a random code, which is not linked to you, and saves it on
+      your device (in your browser's storage on the web). When you join a room it is sent to the host over the direct
       connection, so that if you drop out you can get your seat back. It is never sent to the developer's server, and
-      the host's game keeps it only while the room lasts. Clearing the site's data in your browser deletes it.</li>
+      the host's game keeps it only while the room lasts. Uninstalling the game, or clearing the site's data in your browser, deletes it.</li>
+  <li><strong>On iPhone and iPad</strong>, a direct connection to a player on the same Wi-Fi can make iOS ask whether
+      the game may find devices on your local network. If you refuse, a connection to a player on your own network may fail; the game uses it only to
+      connect to the players of a room.</li>
   <li><strong>Invite links</strong> contain the room code. Anyone who has the link can try to join the room while it is
       open, so share it only with the players you want.</li>
 </ul>
